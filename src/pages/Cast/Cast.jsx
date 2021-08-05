@@ -11,7 +11,18 @@ export default function Cast({ movieId }) {
   const actorPhoto = 'https://image.tmdb.org/t/p/w500';
 
   useEffect(() => {
-    fetchMovieCredits(movieId).then(castList => setCast(castList));
+    async function onFetchMovieCredits() {
+      try {
+        const cast = await fetchMovieCredits(movieId);
+        if (cast.length === 0) {
+          <p>no cast</p>;
+        }
+        setCast(cast);
+      } catch (error) {
+        <p>no cast</p>;
+      }
+    }
+    onFetchMovieCredits();
   }, [movieId]);
 
   return (

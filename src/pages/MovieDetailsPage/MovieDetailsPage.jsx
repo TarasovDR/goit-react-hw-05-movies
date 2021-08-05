@@ -8,6 +8,7 @@ import {
   useLocation,
   useHistory,
 } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
 import { fetchMovieInfo } from 'services/moviesApi';
 import {
@@ -26,19 +27,30 @@ const Reviews = lazy(() =>
 );
 
 export default function MovieDetailsPage() {
+  const [movie, setMovie] = useState(null);
   const { movieId } = useParams();
   const { url, path } = useRouteMatch();
-  const [movie, setMovie] = useState(null);
   const history = useHistory();
   const location = useLocation();
   const moviePoster = 'https://image.tmdb.org/t/p/w500';
 
   useEffect(() => {
-    fetchMovieInfo(movieId).then(movieItem => setMovie(movieItem));
+    async function onFetchMovieInfo() {
+      try {
+        const movie = await fetchMovieInfo(movieId);
+        if (movie.length === 0) {
+          <p>no movie</p>;
+        }
+        setMovie(movie);
+      } catch (error) {
+        <p>no movie</p>;
+      }
+    }
+    onFetchMovieInfo();
   }, [movieId]);
 
   const onGoBack = () => {
-    history.push(location?.state?.from ?? '/movies');
+    history.push(location?.state?.from ?? '/');
   };
 
   return (
@@ -82,7 +94,6 @@ export default function MovieDetailsPage() {
       )}
       <hr />
 
-      {/* <div> */}
       <H3>Additional Information:</H3>
       <ul>
         <li>
@@ -107,14 +118,11 @@ export default function MovieDetailsPage() {
         </li>
       </ul>
 
-      {/* </div> */}
-
       <Suspense fallback={<Loader />}>
         <Switch>
           <Route path={`${path}/cast`} exact>
             <Cast movieId={movieId} />
           </Route>
-
           <Route path={`${path}/reviews`} exact>
             <Reviews movieId={movieId} />
           </Route>
@@ -123,3 +131,11 @@ export default function MovieDetailsPage() {
     </>
   );
 }
+
+MovieDetailsPage.propTypes = {
+  title: PropTypes.string,
+  poster_path: PropTypes.string,
+  vote_average: PropTypes.number,
+  overview: PropTypes.string,
+  release_date: PropTypes.string,
+};

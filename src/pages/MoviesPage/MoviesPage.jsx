@@ -1,69 +1,54 @@
 import { useState, useEffect } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import * as moviesApi from '../../services/moviesApi';
-import Button from '../../components/Button/Button';
+
+import { fetchMovies } from '../../services/moviesApi';
 import Loader from '../../components/Loader/Loader';
 import MoviesList from '../../components/MoviesList/MoviesList';
-import { Form, Input, FormButton } from './MoviesPage.styled';
+import Searchbar from 'components/Searchbar';
 
 export default function MoviesPage() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [movies, setMovies] = useState([]);
-  const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
+  const location = useLocation();
+  const history = useHistory();
+
+  useEffect(() => {
+    if (location.search === '') return;
+
+    const newSearch = new URLSearchParams(location.search).get('query');
+    setQuery(newSearch);
+  }, [location.search]);
 
   useEffect(() => {
     if (!query) return;
 
-    // moviesApi.fetchMovies()
-    //   .then(setMovies)
-    //   .catch(error => setError(error.message))
-    //   .finally(() => setIsLoading(false));
+    async function onFetchMovies() {
+      try {
+        setIsLoading(true);
+        const moviesQuery = await fetchMovies(query);
+        if (moviesQuery.length === 0) {
+          toast.error('Oops, no such movie');
+          setQuery('');
+          setMovies([]);
+        }
+        setMovies(moviesQuery);
+      } catch (error) {
+        setError('error');
+        <p>no match</p>;
+      }
+    }
+    onFetchMovies();
   }, [query]);
 
-  const handleChange = e => {
-    const searchQuery = e.target.value;
-    setQuery(searchQuery);
-  };
+  const handleSubmit = newQuery => {
+    if (query === newQuery) return;
 
-  const handleSubmit = e => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    if (query.trim() === '') {
-      toast.warn('no request - no movie=)', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-      return;
-    }
-
-    if (movies.length === 0) {
-      setQuery('');
-      setMovies([]);
-      setError(null);
-    }
-
-    moviesApi
-      .fetchMovies({ query, page })
-      .then(setMovies)
-      .catch(error => setError(error.message))
-      .finally(() => setIsLoading(false));
-
-    setQuery(query);
-  };
-
-  // useEffect(() => {
-  //   window.scrollTo({
-  //     top: document.documentElement.scrollHeight,
-  //     behavior: 'smooth',
-  //   });
-  // });
-
-  const onLoadMore = () => {
-    setPage(prevPage => prevPage + 1);
+    setQuery(newQuery);
+    history.push({ ...location, search: `query=${newQuery}` });
   };
 
   return (
@@ -74,21 +59,9 @@ export default function MoviesPage() {
           autoClose: 3000,
         })}
       {isLoading && <Loader />}
-      <Form onSubmit={handleSubmit}>
-        <Input
-          autoComplete="off"
-          autoFocus
-          onChange={handleChange}
-          placeholder="Search movies"
-          type="text"
-          value={query}
-        ></Input>
-        <FormButton type="submit">
-          <span>Search</span>
-        </FormButton>
-      </Form>
+      <Searchbar onSubmit={handleSubmit} />
+
       {movies && <MoviesList movies={movies} />}
-      {movies.length > 20 && <Button onClick={onLoadMore} />}
     </>
   );
 }
